@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>一発合格ラボ｜電気・通信・家電の資格を一問一答で</title>
+<link rel="canonical" href="https://ippatsu-gokaku.com/">
+<meta name="description" content="一発合格ラボ｜現役技術者が教える電気・通信・家電の資格。工事担任者・第二種電気工事士・家電製品エンジニアを一問一答で一発合格へ。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Zen+Kaku+Gothic+New:wght@700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <button class="logo" id="home-btn" type="button"><i></i><span>一発合格ラボ<small class="tagline">現役技術者が教える電気・通信・家電の資格</small></span></button>
+    <span class="streak num" id="streak"></span>
+  </div>
+</header>
+
+<!-- ホーム -->
+<div id="home">
+  <div class="today">
+    <div class="wrap">
+      <h1>資格は一発で取る。<br>1日10問で、合格ラインを超えよう。</h1>
+      <div class="goal">
+        <span class="lbl">今日の目標</span>
+        <span class="val num" id="g-val"></span>
+        <div class="meter"><span id="g-bar"></span></div>
+        <span class="hint" id="g-hint"></span>
+      </div>
+    </div>
+  </div>
+  <div class="wrap">
+    <section>
+      <h2 class="h2">資格をえらぶ <small>縦線は合格ラインの目安 60%</small></h2>
+      <div class="exams" id="exams"></div>
+    </section>
+    <section>
+      <h2 class="h2">解説を書いている人</h2>
+      <div class="author">
+        <div class="avatar">修</div>
+        <div>
+          <p>家電修理の現場で10年以上。前職では企業の電話設備工事とIP-PBXの構築を担当していました。参考書に書いていない「現場ではこうなる」を解説に入れています。</p>
+          <ul><li>家電製品エンジニア</li><li>工事担任者 総合通信</li><li>家電修理 10年以上</li></ul>
+        </div>
+      </div>
+    </section>
+    <footer><nav style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:8px"><a href="/koutan/" style="color:inherit">工事担任者 問題一覧</a><a href="/denko2/" style="color:inherit">第二種電気工事士 問題一覧</a><a href="/kaden/" style="color:inherit">家電製品エンジニア 問題一覧</a><a href="/about.html" style="color:inherit">運営者情報</a></nav>問題はすべてオリジナルで、試験の過去問ではありません。</footer>
+  </div>
+</div>
+
+<!-- 問題 -->
+<div id="quiz" class="hidden">
+  <div class="wrap">
+    <div class="qtop">
+      <div class="qbar">
+        <button class="back" id="q-back" type="button">やめる</button>
+        <div class="prog"><span id="q-prog"></span></div>
+        <span class="count num" id="q-count"></span>
+      </div>
+    </div>
+    <div class="card" id="q-card"></div>
+  </div>
+</div>
+
+<!-- 結果 -->
+<div id="done" class="hidden">
+  <div class="wrap">
+    <div class="card" style="margin-top:16px" id="d-card"></div>
+  </div>
+</div>
+
+<script>
+const EXAMS = __DATA__;
+const GOAL = 10, PASS = 0.6;
+
+/* 保存（使えない環境でも動くように） */
+const S = {
+  get(k,d){try{const v=JSON.parse(localStorage.getItem("shk_"+k));return v??d}catch(e){return d}},
+  set(k,v){try{localStorage.setItem("shk_"+k,JSON.stringify(v))}catch(e){}}
+};
+let stats = S.get("stats",{});   // "examId:i" -> {n,c,last}
+let marks = S.get("marks",{});   // "examId:i" -> true
+let days  = S.get("days",{});    // "YYYY-MM-DD" -> 解答数
+
+const $ = id => document.getElementById(id);
+const today = () => { const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
+function streak(){
+  let n=0; const d=new Date();
+  if(!days[today()]) d.setDate(d.getDate()-1);
+  while(true){ const k=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); if(days[k]){n++; d.setDate(d.getDate()-1);} else break; }
+  return n;
+}
+function examRate(ex){
+  let n=0,c=0; ex.qs.forEach((q,i)=>{const s=stats[ex.id+":"+i]; if(s){n++; if(s.last) c++;}});
+  return {done:n, rate:n? c/n : 0, weak:ex.qs.filter((q,i)=>{const s=stats[ex.id+":"+i]; return s && !s.last}).length};
+}
+
+/* ホーム */
+function showHome(){
+  $("home").classList.remove("hidden"); $("quiz").classList.add("hidden"); $("done").classList.add("hidden");
+  const t = days[today()]||0, st = streak();
+  $("streak").innerHTML = st ? "連続 <b>"+st+"</b> 日" : "今日から記録スタート";
+  $("g-val").textContent = Math.min(t,GOAL)+" / "+GOAL+"問";
+  $("g-bar").style.width = Math.min(100, t/GOAL*100)+"%";
+  $("g-hint").textContent = t>=GOAL ? "今日の目標を達成しました。明日も続けると連続記録が伸びます。" : "あと"+(GOAL-t)+"問で今日の目標達成です。";
+  const box = $("exams"); box.innerHTML = "";
+  EXAMS.forEach((ex,ei)=>{
+    const r = examRate(ex), el = document.createElement("article");
+    el.className = "exam"; el.style.setProperty("--c", ex.color);
+    el.innerHTML =
+      '<div class="row"><div><h3></h3><div class="meta"></div></div><span class="chip"></span></div>'+
+      '<div class="rate"><span style="width:'+Math.round(r.rate*100)+'%"></span><em></em></div>'+
+      '<div class="rate-lbl num"><span>正答率 '+(r.done?Math.round(r.rate*100)+'%':'—')+'</span><span>'+r.done+' / '+ex.qs.length+'問 解答済み</span></div>'+
+      '<div class="acts"><button class="btn pri" type="button">10問チャレンジ</button><button class="btn sec" type="button">苦手だけ（'+r.weak+'）</button></div>';
+    const h=el.querySelector("h3"); const a=document.createElement("a"); a.className="examlink"; a.href="/"+ex.id+"/"; a.textContent=ex.name; h.appendChild(a);
+    el.querySelector(".meta").textContent = ex.sub;
+    el.querySelector(".chip").textContent = ex.sched;
+    const [b1,b2] = el.querySelectorAll(".btn");
+    b1.onclick = ()=>start(ei,"all");
+    b2.disabled = !r.weak; b2.onclick = ()=>start(ei,"weak");
+    box.appendChild(el);
+  });
+  window.scrollTo(0,0);
+}
+
+/* 出題 */
+let ex, list, pos, log;
+function start(ei, mode){
+  ex = EXAMS[ei];
+  let idx = ex.qs.map((q,i)=>i);
+  if(mode==="weak") idx = idx.filter(i=>{const s=stats[ex.id+":"+i]; return s && !s.last});
+  // 未解答と苦手を優先し、あとはランダム
+  idx.sort((a,b)=>prio(b)-prio(a) || Math.random()-.5);
+  list = idx.slice(0,GOAL); pos = 0; log = [];
+  $("home").classList.add("hidden"); $("done").classList.add("hidden"); $("quiz").classList.remove("hidden");
+  document.querySelector("#quiz").style.setProperty("--c", ex.color);
+  showQ();
+}
+function prio(i){ const s=stats[ex.id+":"+i]; if(!s) return 2; return s.last?0:1; }
+function showQ(){
+  const qi = list[pos], q = ex.qs[qi], key = ex.id+":"+qi;
+  $("q-prog").style.width = (pos/list.length*100)+"%";
+  $("q-count").textContent = (pos+1)+" / "+list.length;
+  const c = $("q-card");
+  c.innerHTML = '<div class="qhead"><span class="cat"></span><button class="mark" type="button"></button></div><div class="qtext"></div><div class="opts"></div><div class="result" id="res"></div>';
+  c.querySelector(".cat").textContent = ex.name+"｜"+q.c;
+  c.querySelector(".qtext").textContent = q.q;
+  const mk = c.querySelector(".mark");
+  const paint = ()=>{ mk.classList.toggle("on",!!marks[key]); mk.textContent = marks[key] ? "★ 保存済み" : "☆ あとで見直す"; };
+  paint(); mk.onclick = ()=>{ marks[key] ? delete marks[key] : marks[key]=true; S.set("marks",marks); paint(); };
+  const box = c.querySelector(".opts");
+  q.o.forEach((txt,i)=>{
+    const b = document.createElement("button"); b.className="opt"; b.type="button";
+    b.innerHTML = "<b>"+"ABCD"[i]+"</b><span></span>"; b.querySelector("span").textContent = txt;
+    b.onclick = ()=>answer(i,qi,q); box.appendChild(b);
+  });
+  window.scrollTo(0,0);
+}
+function answer(i,qi,q){
+  const ok = i===q.a, key = ex.id+":"+qi;
+  document.querySelectorAll(".opt").forEach((b,j)=>{ b.disabled=true; if(j===q.a) b.classList.add("ok"); else if(j===i) b.classList.add("ng"); });
+  const s = stats[key] || {n:0,c:0}; s.n++; if(ok) s.c++; s.last = ok; stats[key]=s; S.set("stats",stats);
+  days[today()] = (days[today()]||0)+1; S.set("days",days);
+  log.push({c:q.c, ok});
+  const r = $("res");
+  r.innerHTML = '<div class="verdict"></div><div class="exp"></div>'+(q.t?'<div class="tip"><strong>現場メモ</strong><span></span></div>':'')+'<button class="btn pri next" type="button"></button>';
+  const v = r.querySelector(".verdict"); v.textContent = ok ? "正解" : "不正解　正解は "+"ABCD"[q.a]; v.style.color = ok ? "var(--ok)" : "var(--ng)";
+  r.querySelector(".exp").textContent = q.e;
+  if(q.t) r.querySelector(".tip span").textContent = q.t;
+  const nx = r.querySelector(".next"); nx.textContent = pos+1<list.length ? "次の問題へ" : "結果を見る";
+  nx.onclick = ()=>{ pos++; pos<list.length ? showQ() : finish(); };
+  $("streak").innerHTML = "連続 <b>"+streak()+"</b> 日";
+}
+
+/* 結果 */
+function finish(){
+  $("quiz").classList.add("hidden"); $("done").classList.remove("hidden");
+  const n = log.length, c = log.filter(x=>x.ok).length, rate = c/n, pass = rate>=PASS;
+  const cats = {}; log.forEach(x=>{ cats[x.c]=cats[x.c]||{n:0,c:0}; cats[x.c].n++; if(x.ok) cats[x.c].c++; });
+  const t = days[today()]||0;
+  const d = $("d-card"); d.style.setProperty("--c", ex.color);
+  d.innerHTML =
+    '<div class="score"><div class="cat"></div><div class="big num">'+c+' / '+n+'</div>'+
+    '<span class="pass '+(pass?'ok':'ng')+'">'+(pass?'合格ライン（60%）を超えました':'合格ラインまであと '+Math.max(1,Math.ceil(n*PASS)-c)+' 問')+'</span></div>'+
+    '<div class="cats" id="cats"></div>'+
+    '<div class="tip"><strong>今日の記録</strong><span class="num">'+(t>=GOAL?'今日の目標'+GOAL+'問を達成。連続 '+streak()+' 日目です。':'今日は '+t+' 問。あと '+(GOAL-t)+' 問で目標達成です。')+'</span></div>'+
+    '<div class="acts"><button class="btn pri" type="button" id="again">もう一度</button><button class="btn sec" type="button" id="tohome">ホームへ</button></div>'+
+    '<a class="share" id="share" href="#" target="_blank" rel="noopener">結果をXでシェア</a>';
+  d.querySelector(".cat").textContent = ex.name;
+  const cb = $("cats");
+  Object.entries(cats).forEach(([k,v])=>{
+    const row = document.createElement("div"); row.className="catrow";
+    row.innerHTML = '<span></span><div class="rate"><span style="width:'+Math.round(v.c/v.n*100)+'%"></span><em></em></div><span class="num">'+v.c+'/'+v.n+'</span>';
+    row.querySelector("span").textContent = k; cb.appendChild(row);
+  });
+  const ei = EXAMS.indexOf(ex);
+  $("again").onclick = ()=>start(ei,"all");
+  $("tohome").onclick = showHome;
+  $("share").href = "https://twitter.com/intent/tweet?text="+encodeURIComponent(ex.name+"の一問一答で "+c+"/"+n+" 問正解。連続"+streak()+"日目 #一発合格ラボ #"+ex.name+" #資格勉強");
+  window.scrollTo(0,0);
+}
+
+$("home-btn").onclick = showHome;
+$("q-back").onclick = showHome;
+showHome();
+const hx=EXAMS.findIndex(e=>"#"+e.id===location.hash); if(hx>=0) start(hx,"all");
+</script>
+</body>
+</html>
