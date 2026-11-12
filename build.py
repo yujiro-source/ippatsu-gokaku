@@ -108,13 +108,66 @@ def question_page(ex, i, q):
     return path, head(title, desc, path, extra) + body
 
 
-def exam_page(ex):
+def render_blocks(blocks):
+    out = []
+    for b in blocks:
+        if "h" in b:
+            out.append(f"<h2>{escape(b['h'])}</h2>")
+        elif "p" in b:
+            out.append(f"<p>{escape(b['p'])}</p>")
+        elif "ul" in b or "ol" in b:
+            tag = "ul" if "ul" in b else "ol"
+            out.append(f"<{tag}>" + "".join(f"<li>{escape(x)}</li>" for x in b[tag]) + f"</{tag}>")
+        elif "table" in b:
+            rows = b["table"]
+            th = "".join(f"<th>{escape(c)}</th>" for c in rows[0])
+            tr = "".join("<tr>" + "".join(f"<td>{escape(c)}</td>" for c in r) + "</tr>" for r in rows[1:])
+            out.append(f'<div class="tbl"><table><thead><tr>{th}</tr></thead><tbody>{tr}</tbody></table></div>')
+        elif "tip" in b:
+            out.append(f'<div class="tip"><strong>現場メモ</strong><span>{escape(b["tip"])}</span></div>')
+    return "\n".join(out)
+
+
+def article_page(ex, art):
+    path = f"/{ex['id']}/{art['slug']}.html"
+    title = f"{art['title']}｜{NAME}"
+    rel = [(i, q) for i, q in enumerate(ex["qs"]) if q["c"] in art["cats"]][:8]
+    rel_html = "".join(
+        f'<li><a href="q{i + 1:03d}.html"><small>{escape(q["c"])}</small>{escape(q["q"])}</a></li>' for i, q in rel)
+    ld = {"@context": "https://schema.org", "@type": "Article", "headline": art["title"],
+          "description": art["desc"], "dateModified": date.today().isoformat(),
+          "author": {"@type": "Person", "name": f"{NAME} 編集部（家電修理技術者）"},
+          "publisher": {"@type": "Organization", "name": NAME}}
+    extra = f'<script type="application/ld+json">{json.dumps(ld, ensure_ascii=False)}</script>'
+    body = f"""<body style="--c:var(--c-{ex['color']})">
+{header()}
+<main class="wrap page article">
+<nav class="crumb"><a href="/">ホーム</a> › <a href="/{ex['id']}/">{escape(ex['name'])}</a> › まとめ</nav>
+<h1>{escape(art['title'])}</h1>
+<p class="lead">{escape(art['desc'])}</p>
+<div class="card">
+{render_blocks(art['blocks'])}
+</div>
+<a class="btn pri" href="/#{ex['id']}" style="margin:16px 0">{escape(ex['name'])}を10問まとめて解く</a>
+<h2 class="h2">この記事に関連する問題</h2>
+<ul class="qlinks">{rel_html}</ul>
+</main>
+{footer()}
+</body></html>"""
+    return path, head(title, art["desc"], path, extra) + body
+
+
+def exam_page(ex, arts=()):
     path = f"/{ex['id']}/"
     title = f"{ex['name']}の一問一答・解説つき問題一覧｜{NAME}"
     desc = f"{ex['name']}（{ex['sub']}）に一発合格するための一問一答。全{len(ex['qs'])}問、現役技術者の解説と現場メモつき。"
     items = "".join(
         f'<li><a href="q{i + 1:03d}.html"><small>{escape(q["c"])}</small>{escape(q["q"])}</a></li>'
         for i, q in enumerate(ex["qs"]))
+    art_html = ""
+    if arts:
+        art_html = '<h2 class="h2">まとめ記事</h2><ul class="qlinks" style="margin-bottom:20px">' + "".join(
+            f'<li><a href="{a["slug"]}.html"><small>まとめ</small>{escape(a["title"])}</a></li>' for a in arts) + "</ul>"
     body = f"""<body style="--c:var(--c-{ex['color']})">
 {header()}
 <main class="wrap page">
@@ -122,6 +175,8 @@ def exam_page(ex):
 <h1>{escape(ex['name'])}の一問一答</h1>
 <p style="margin:0 0 12px;color:var(--sub);font-size:14px">{escape(ex['sub'])}・{escape(ex['sched'])}。気になる問題を開くか、まとめて解いて弱点を見つけましょう。</p>
 <a class="btn pri" href="/#{ex['id']}" style="margin-bottom:16px">10問チャレンジを始める</a>
+{art_html}
+<h2 class="h2">問題一覧</h2>
 <ul class="qlinks">{items}</ul>
 </main>
 {footer()}
@@ -167,14 +222,25 @@ def main():
     app_data = [dict(e, color=f"var(--c-{e['color']})") for e in exams]
     app = (ROOT / "src/app.html").read_text(encoding="utf-8")
     app = app.replace("__DATA__", json.dumps(app_data, ensure_ascii=False))
+    arts_all = json.loads((ROOT / "data/articles.json").read_text(encoding="utf-8"))
+    names = {e["id"]: e["name"] for e in exams}
+    app = app.replace("__ARTICLES__", '<ul class="qlinks" style="--c:var(--brand)">' + "".join(
+        f'<li><a href="/{a["exam"]}/{a["slug"]}.html"><small>{escape(names[a["exam"]])}</small>{escape(a["title"])}</a></li>'
+        for a in arts_all) + "</ul>")
     write("/", app)
 
     paths = ["/", "/about.html"]
     write(*about_page())
+    articles = json.loads((ROOT / "data/articles.json").read_text(encoding="utf-8"))
     for ex in exams:
-        p, html = exam_page(ex)
+        arts = [a for a in articles if a["exam"] == ex["id"]]
+        p, html = exam_page(ex, arts)
         write(p, html)
         paths.append(p)
+        for a in arts:
+            p, html = article_page(ex, a)
+            write(p, html)
+            paths.append(p)
         for i, q in enumerate(ex["qs"]):
             p, html = question_page(ex, i, q)
             write(p, html)
