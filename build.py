@@ -19,6 +19,7 @@ ROOT = Path(__file__).parent
 OUT = ROOT / "site"
 SITE = "https://ippatsu-gokaku.com"
 NAME = "一発合格ラボ"
+CONTACT_URL = "https://forms.gle/4JthoGubcLiXgCX56"
 TAG = "現役技術者が教える電気・通信・家電の資格"
 LETTERS = "ABCD"
 
@@ -57,7 +58,7 @@ def header():
 
 def footer():
     return f"""<footer class="wrap">問題はすべてオリジナルで、試験の過去問ではありません。<br>
-<a href="/about.html" style="color:inherit">運営者情報</a> ・ © {date.today().year} {NAME}</footer>"""
+<a href="/about.html" style="color:inherit">運営者情報</a> ・ <a href="/privacy.html" style="color:inherit">プライバシーポリシー</a> ・ <a href="/contact.html" style="color:inherit">お問い合わせ</a><br>© {date.today().year} {NAME}</footer>"""
 
 
 def snippet(text, n=60):
@@ -184,6 +185,56 @@ def exam_page(ex, arts=()):
     return path, head(title, desc, path) + body
 
 
+def simple_page(path, title, desc, inner):
+    body = f"""<body>
+{header()}
+<main class="wrap page article" style="--c:var(--brand)">
+<nav class="crumb"><a href="/">ホーム</a> › {escape(title)}</nav>
+<h1>{escape(title)}</h1>
+<div class="card">
+{inner}
+</div>
+</main>
+{footer()}
+</body></html>"""
+    return path, head(f"{title}｜{NAME}", desc, path) + body
+
+
+def privacy_page():
+    inner = f"""<h2>個人情報の取り扱い</h2>
+<p>お問い合わせフォームで入力いただいた情報（お名前、メールアドレス、内容）は、お問い合わせへの返信と、内容の確認のためだけに使います。法令にもとづく場合を除き、本人の同意なく第三者に提供しません。</p>
+<h2>学習記録の保存について</h2>
+<p>一問一答の解答記録、連続学習日数、「あとで見直す」に保存した問題は、お使いのブラウザの中（ローカルストレージ）にだけ保存されます。当サイトのサーバーに送られることはありません。ブラウザのデータを削除すると、記録も消えます。</p>
+<h2>広告について</h2>
+<p>当サイトでは、今後、第三者配信の広告サービス（Google AdSenseなど）や、商品・サービスを紹介するアフィリエイトプログラムを利用することがあります。広告を掲載する記事では、本文中に広告である旨を明記します。</p>
+<p>Googleなどの第三者配信事業者は、Cookie（クッキー）を使用して、ユーザーが当サイトや他のサイトに過去にアクセスした際の情報にもとづいて広告を配信します。Googleが広告Cookieを使用することにより、Googleやそのパートナーは、ユーザーが当サイトや他のサイトにアクセスした際の情報にもとづいて、適切な広告を表示できます。</p>
+<p>パーソナライズ広告は、<a href="https://adssettings.google.com/" target="_blank" rel="noopener">Googleの広告設定</a>で無効にできます。Googleによるデータの使用については、<a href="https://policies.google.com/technologies/ads?hl=ja" target="_blank" rel="noopener">Googleのポリシーと規約</a>をご覧ください。</p>
+<h2>アクセス解析</h2>
+<p>当サイトは、サイトの利用状況を把握し、内容を改善するために、Cloudflare社のアクセス解析（Cloudflare Web Analytics）を利用しています。閲覧されたページ、参照元（どのサイトや検索から来たか）、国や地域、端末やブラウザの種類などを、個人を特定しない形で集計します。この解析は、Cookieを使いません。</p>
+<p>また、Google検索での表示回数や、検索に使われた言葉などを把握するために、Google Search Consoleを利用しています。これはGoogle検索の統計情報で、当サイトの訪問者を個人として特定するものではありません。</p>
+<h2>免責事項</h2>
+<p>掲載している問題や解説は、正確さに注意して作成していますが、内容の正確性や最新性を保証するものではありません。試験の日程、受験料、出題範囲などは、必ず各試験の実施機関の公式情報でご確認ください。当サイトの利用によって生じた損害について、当サイトは責任を負いかねます。リンク先のサイトで提供される情報やサービスについても、責任を負いかねます。</p>
+<h2>著作権について</h2>
+<p>当サイトに掲載している問題は、すべてオリジナルで作成したもので、試験の過去問を転載したものではありません。文章や問題の無断転載はご遠慮ください。</p>
+<h2>内容の変更</h2>
+<p>このポリシーの内容は、予告なく変更することがあります。</p>
+<p style="color:var(--sub);font-size:13px">制定日：2026年11月18日</p>"""
+    return simple_page("/privacy.html", "プライバシーポリシー", f"{NAME}のプライバシーポリシー、広告、アクセス解析、免責事項について。", inner)
+
+
+def contact_page():
+    inner = f"""<p>問題や解説の誤りのご指摘、内容についてのご質問、掲載についてのご相談は、下のフォームからお送りください。</p>
+<p><a class="btn pri" href="{CONTACT_URL}" target="_blank" rel="noopener noreferrer">お問い合わせフォームを開く</a></p>
+<h2>お送りいただく前に</h2>
+<ul>
+<li>どの問題・記事についてのお問い合わせかがわかるように、ページのURLや問題の番号を書き添えてください。</li>
+<li>お返事までにお時間をいただくことがあります。すべてのご質問にお返事できるとは限りません。</li>
+<li>試験の申し込みや合否についてのお問い合わせは、各試験の実施機関にお願いします。</li>
+<li>入力いただいた情報の扱いは、<a href="/privacy.html">プライバシーポリシー</a>をご覧ください。</li>
+</ul>"""
+    return simple_page("/contact.html", "お問い合わせ", f"{NAME}へのお問い合わせ。問題や解説の誤りのご指摘などはこちらから。", inner)
+
+
 def about_page():
     path = "/about.html"
     body = f"""<body>
@@ -229,8 +280,10 @@ def main():
         for a in arts_all) + "</ul>")
     write("/", app)
 
-    paths = ["/", "/about.html"]
+    paths = ["/", "/about.html", "/privacy.html", "/contact.html"]
     write(*about_page())
+    write(*privacy_page())
+    write(*contact_page())
     articles = json.loads((ROOT / "data/articles.json").read_text(encoding="utf-8"))
     for ex in exams:
         arts = [a for a in articles if a["exam"] == ex["id"]]
